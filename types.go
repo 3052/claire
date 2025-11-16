@@ -23,16 +23,24 @@ type TypeDoc struct {
    Methods    []FuncDoc
 }
 
-// PackageDoc holds all the documentation for a package.
+// PackageInfo holds metadata for a single sub-package within a module.
+type PackageInfo struct {
+   Name string
+   Path string
+}
+
+// PackageDoc holds all the documentation for a single package.
 type PackageDoc struct {
-   Name          string
-   RepositoryURL string
-   Version       string
-   ImportPath    string
-   VCS           string
-   Doc           string
-   Functions     []FuncDoc
-   Types         []TypeDoc
-   Variables     []VarDoc
-   Constants     []VarDoc
+   Name           string
+   RepositoryURL  string
+   Version        string
+   ImportPath     string
+   VCS            string
+   StyleSheetPath string
+   Doc            string
+   Functions      []FuncDoc
+   Types          []TypeDoc
+   Variables      []VarDoc
+   Constants      []VarDoc
+   SubPackages    []PackageInfo
 }

@@ -5,7 +5,7 @@
     {{if and .ImportPath .VCS .RepositoryURL}}
     <meta name="go-import" content="{{.ImportPath}} {{.VCS}} {{.RepositoryURL}}">
     {{end}}
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="{{.StyleSheetPath}}">
 </head>
 <body>
     <h1>
@@ -17,12 +17,14 @@
             <span class="repository-link">[<a href="{{.RepositoryURL}}" target="_blank" rel="noopener">repository</a>]</span>
         {{end}}
     </h1>
+    <div class="nav-up"><a href="../">Up</a></div>
     {{if .Doc}}
     <div class="doc">
         <pre>{{.Doc}}</pre>
     </div>
     {{end}}
 
+    {{if or .Constants .Variables .Functions .Types}}
     <h2>Index</h2>
     <ul>
         {{if .Constants}}<li><a href="#constants">Constants</a></li>{{end}}
@@ -38,6 +40,7 @@
         </li>
         {{end}}
     </ul>
+    {{end}}
 
     {{if .Constants}}
     <h2 id="constants">Constants</h2>
@@ -78,6 +81,15 @@
             {{end}}
         {{end}}
     {{end}}
+    {{end}}
+
+    {{if .SubPackages}}
+    <h2>Packages</h2>
+    <ul>
+        {{range .SubPackages}}
+        <li><a href="{{.Path}}/">{{.Path}}</a></li>
+        {{end}}
+    </ul>
     {{end}}
 </body>
 </html>

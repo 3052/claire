@@ -14,7 +14,7 @@ pre {
     padding: 1em;
     border: 1px solid #ddd;
     white-space: pre-wrap;
-    font-size: 1.1em; /* Slightly increased font size */
+    font-size: 1.1em;
 }
 
 .doc {
@@ -22,7 +22,7 @@ pre {
 }
 
 .comment {
-    color: #008000;
+    color: #666666;
 }
 
 .keyword {
@@ -50,4 +50,9 @@ pre {
     font-size: 0.8em;
     font-weight: normal;
     margin-left: 1em;
+}
+
+.nav-up {
+    margin-bottom: 1.5em;
+    font-size: 0.9em;
 }

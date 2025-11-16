@@ -31,7 +31,10 @@ func (f *flag_set) do() error {
       return err
    }
    // Check that both the HTML and CSS files were created.
-   files_to_check := []string{"index.html", "style.css"}
+   files_to_check := []string{
+      "index.html",
+      "style.css",
+   }
    for _, file := range files_to_check {
       output_file := filepath.Join(f.Output, file)
       _, err = os.Stat(output_file)

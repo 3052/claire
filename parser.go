@@ -15,7 +15,7 @@ import (
 )
 
 // Parse parses the Go package in the given directory and returns a PackageDoc.
-func Parse(dir, repoURL, version, importPath, vcs string) (*PackageDoc, error) {
+func Parse(dir, repoURL, version, importPath, vcs, styleSheetPath string) (*PackageDoc, error) {
    fset := token.NewFileSet()
    files, err := parseGoFiles(fset, dir)
    if err != nil {
@@ -36,12 +36,13 @@ func Parse(dir, repoURL, version, importPath, vcs string) (*PackageDoc, error) {
    }
 
    pkgDoc := &PackageDoc{
-      Name:          p.Name,
-      RepositoryURL: repoURL,
-      Version:       version,
-      ImportPath:    importPath,
-      VCS:           vcs,
-      Doc:           p.Doc,
+      Name:           p.Name,
+      RepositoryURL:  repoURL,
+      Version:        version,
+      ImportPath:     importPath,
+      VCS:            vcs,
+      StyleSheetPath: styleSheetPath,
+      Doc:            p.Doc,
    }
 
    process := func(decl ast.Decl) (template.HTML, error) {
