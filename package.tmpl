@@ -2,8 +2,9 @@
 <html>
 <head>
     <title>Documentation for {{.Name}}</title>
-    {{if and .ImportPath .VCS .RepositoryURL}}
-    <meta name="go-import" content="{{.ImportPath}} {{.VCS}} {{.RepositoryURL}}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{if and .ImportPath .RepositoryURL}}
+    <meta name="go-import" content="{{.ImportPath}} git {{.RepositoryURL}}">
     {{end}}
     <link rel="stylesheet" href="{{.StyleSheetPath}}">
 </head>
