@@ -25,7 +25,7 @@ func (f *flag_set) do() error {
       return err
    }
    err = claire.Generate(
-      f.Input, f.Output, f.Repository, f.Version, f.ImportPath, "git",
+      f.Input, f.Output, f.Repository, f.Version, f.ImportPath,
    )
    if err != nil {
       return err

@@ -1,6 +1,40 @@
 package claire
 
-import "html/template"
+import (
+   _ "embed"
+   "html/template"
+   "log"
+   "os"
+   "path/filepath"
+)
+
+//go:embed package.tmpl
+var packageTemplateFile string
+
+//go:embed style.css
+var styleFile string
+
+// Render generates the HTML documentation file using the embedded template.
+func Render(pkgDoc *PackageDoc, outputPath string) error {
+   // Parse the template directly from the embedded string variable.
+   tmpl, err := template.New("package").Parse(packageTemplateFile)
+   if err != nil {
+      return err
+   }
+
+   if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+      return err
+   }
+
+   log.Printf("Creating file: %s", outputPath)
+   file, err := os.Create(outputPath)
+   if err != nil {
+      return err
+   }
+   defer file.Close()
+
+   return tmpl.Execute(file, pkgDoc)
+}
 
 // FuncDoc holds documentation for a single function or method.
 type FuncDoc struct {
@@ -35,7 +69,6 @@ type PackageDoc struct {
    RepositoryURL  string
    Version        string
    ImportPath     string
-   VCS            string
    StyleSheetPath string
    Doc            string
    Functions      []FuncDoc
@@ -43,4 +76,13 @@ type PackageDoc struct {
    Variables      []VarDoc
    Constants      []VarDoc
    SubPackages    []PackageInfo
+}
+
+// IsEmpty reports whether the package documentation is empty (has no content).
+func (p *PackageDoc) IsEmpty() bool {
+   return p.Doc == "" &&
+      len(p.Constants) == 0 &&
+      len(p.Variables) == 0 &&
+      len(p.Functions) == 0 &&
+      len(p.Types) == 0
 }
