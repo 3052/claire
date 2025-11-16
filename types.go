@@ -1,4 +1,4 @@
-package doc
+package claire
 
 import "html/template"
 

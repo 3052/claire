@@ -7,7 +7,7 @@ documentation generator
 Go language, I would like to create a package that creates HTML documentation
 for a Go package
 
-1. package will be called "doc"
+1. package will be called "claire"
 2. do not include any "main.go" or "package main"
 3. use a separate file for each type
 4. any templates should be a separate file not a string

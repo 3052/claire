@@ -1,14 +1,16 @@
-package doc
+package claire
 
 import (
    "html/template"
+   "log"
    "os"
    "path/filepath"
 )
 
-// Render generates the HTML documentation file.
-func Render(pkgDoc *PackageDoc, tmplPath, outputPath string) error {
-   tmpl, err := template.ParseFiles(tmplPath)
+// Render generates the HTML documentation file using the embedded template.
+func Render(pkgDoc *PackageDoc, outputPath string) error {
+   // Parse the template directly from the embedded string variable.
+   tmpl, err := template.New("doc").Parse(templateFile)
    if err != nil {
       return err
    }
@@ -17,6 +19,7 @@ func Render(pkgDoc *PackageDoc, tmplPath, outputPath string) error {
       return err
    }
 
+   log.Printf("Creating file: %s", outputPath)
    file, err := os.Create(outputPath)
    if err != nil {
       return err

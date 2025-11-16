@@ -1,4 +1,4 @@
-package doc
+package claire
 
 import (
    "fmt"
@@ -6,12 +6,35 @@ import (
    "go/token"
    "html"
    "html/template"
-   "log"
    "strings"
 )
 
+// builtInTypes holds the set of Go's built-in type identifiers.
+var builtInTypes = map[string]struct{}{
+   "bool":       {},
+   "byte":       {},
+   "complex64":  {},
+   "complex128": {},
+   "error":      {},
+   "float32":    {},
+   "float64":    {},
+   "int":        {},
+   "int8":       {},
+   "int16":      {},
+   "int32":      {},
+   "int64":      {},
+   "rune":       {},
+   "string":     {},
+   "uint":       {},
+   "uint8":      {},
+   "uint16":     {},
+   "uint32":     {},
+   "uint64":     {},
+   "uintptr":    {},
+}
+
 // syntaxHighlight takes Go source code, a fileset, and a map of type offsets,
-// returning syntax-highlighted HTML with only the correct types linked.
+// returning syntax-highlighted HTML with package types, built-ins, and keywords styled.
 func syntaxHighlight(source string, fset *token.FileSet, typeOffsets map[int]struct{}) (template.HTML, error) {
    if fset == nil {
       fset = token.NewFileSet()
@@ -44,9 +67,12 @@ func syntaxHighlight(source string, fset *token.FileSet, typeOffsets map[int]str
 
       if tok == token.IDENT {
          _, isTypeOffset := typeOffsets[offset]
-         log.Printf("[HIGHLIGHTER] Token: '%s', Offset: %d, IsType: %v", lit, offset, isTypeOffset)
+         _, isBuiltIn := builtInTypes[lit]
+
          if isTypeOffset {
             tokenHTML = fmt.Sprintf(`<a href="#%s">%s</a>`, escapedToken, escapedToken)
+         } else if isBuiltIn {
+            tokenHTML = fmt.Sprintf(`<span class="builtin">%s</span>`, escapedToken)
          } else {
             tokenHTML = escapedToken
          }

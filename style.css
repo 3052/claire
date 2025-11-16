@@ -14,6 +14,7 @@ pre {
     padding: 1em;
     border: 1px solid #ddd;
     white-space: pre-wrap;
+    font-size: 1.1em; /* Slightly increased font size */
 }
 
 .doc {
@@ -26,10 +27,16 @@ pre {
 
 .keyword {
     color: #0000ff;
+    font-weight: bold;
 }
 
 .string {
     color: #a31515;
+}
+
+.builtin {
+    color: #228B22;
+    font-weight: bold;
 }
 
 .version-info {
