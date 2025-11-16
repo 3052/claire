@@ -15,6 +15,7 @@ pre {
     border: 1px solid #ddd;
     white-space: pre-wrap;
     font-size: 1.1em;
+    tab-size: 4;
 }
 
 .doc {
@@ -22,21 +23,20 @@ pre {
 }
 
 .comment {
-    color: #666666;
+    color: chocolate;
 }
 
 .keyword {
-    color: #0000ff;
+    color: blue;
     font-weight: bold;
 }
 
 .string {
-    color: #a31515;
+    color: firebrick;
 }
 
 .builtin {
-    color: #228B22;
-    font-weight: bold;
+    color: darkgreen;
 }
 
 .version-info {
