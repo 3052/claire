@@ -35,7 +35,6 @@ type PackageDoc struct {
    RepositoryURL  string
    Version        string
    ImportPath     string
-   VCS            string
    StyleSheetPath string
    Doc            string
    Functions      []FuncDoc
@@ -43,4 +42,13 @@ type PackageDoc struct {
    Variables      []VarDoc
    Constants      []VarDoc
    SubPackages    []PackageInfo
+}
+
+// IsEmpty reports whether the package documentation is empty (has no content).
+func (p *PackageDoc) IsEmpty() bool {
+   return p.Doc == "" &&
+      len(p.Constants) == 0 &&
+      len(p.Variables) == 0 &&
+      len(p.Functions) == 0 &&
+      len(p.Types) == 0
 }

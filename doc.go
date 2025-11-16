@@ -10,7 +10,7 @@ import (
 )
 
 // Generate creates HTML documentation for all packages within a Go module.
-func Generate(sourceDir, outputDir, repoURL, version, importPath, vcs string) error {
+func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
    // 1. Setup the output directory and the single stylesheet.
    if err := os.MkdirAll(outputDir, 0755); err != nil {
       return err
@@ -21,75 +21,80 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath, vcs string) er
       return err
    }
 
-   // 2. Calculate the absolute path for the stylesheet link from the import path.
-   var pathPrefix string
-   if parts := strings.SplitN(importPath, "/", 2); len(parts) > 1 {
-      pathPrefix = parts[1]
-   }
-   styleSheetPath := filepath.ToSlash(filepath.Join("/", pathPrefix, "style.css"))
-
-   // 3. Discover all package directories within the module.
+   // 2. Prepare context for parsing runs.
+   styleSheetPath := calculateStyleSheetPath(importPath)
    allPackagePaths, err := findAllPackageDirs(sourceDir)
    if err != nil {
       return err
    }
 
-   var rootPackageExists bool
-   var subPackagePaths []string
-   for _, p := range allPackagePaths {
-      if p == "." {
-         rootPackageExists = true
-      } else {
-         subPackagePaths = append(subPackagePaths, p)
-      }
-   }
-   sort.Strings(subPackagePaths)
-
-   // 4. Generate docs for all sub-packages.
-   var subPackageInfos []PackageInfo
-   for _, pkgPath := range subPackagePaths {
+   // 3. Parse all discovered packages.
+   parsedDocs := make(map[string]*PackageDoc)
+   for _, pkgPath := range allPackagePaths {
       fullPath := filepath.Join(sourceDir, pkgPath)
       pkgImportPath := filepath.Join(importPath, pkgPath)
-      pkgOutputDir := filepath.Join(outputDir, pkgPath)
-
-      pkgDoc, err := Parse(fullPath, repoURL, version, pkgImportPath, vcs, styleSheetPath)
+      pkgDoc, err := Parse(fullPath, repoURL, version, pkgImportPath, styleSheetPath)
       if err != nil {
          log.Printf("Skipping directory %s: %v", fullPath, err)
          continue
       }
-
-      htmlOutputPath := filepath.Join(pkgOutputDir, "index.html")
-      if err := Render(pkgDoc, htmlOutputPath); err != nil {
-         return err
+      if !pkgDoc.IsEmpty() {
+         parsedDocs[pkgPath] = pkgDoc
+      } else {
+         log.Printf("Skipping empty package: %s", fullPath)
       }
+   }
 
+   // 4. Prepare the list of sub-packages for the root index.
+   var subPackageInfos []PackageInfo
+   var subPackagePaths []string
+   for pkgPath := range parsedDocs {
+      if pkgPath != "." {
+         subPackagePaths = append(subPackagePaths, pkgPath)
+      }
+   }
+   sort.Strings(subPackagePaths)
+
+   for _, pkgPath := range subPackagePaths {
+      pkgDoc := parsedDocs[pkgPath]
       subPackageInfos = append(subPackageInfos, PackageInfo{
          Name: pkgDoc.Name,
          Path: filepath.ToSlash(pkgPath),
       })
    }
 
-   // 5. Generate the root index.html.
-   var rootDoc *PackageDoc
-   if rootPackageExists {
-      rootDoc, err = Parse(sourceDir, repoURL, version, importPath, vcs, styleSheetPath)
-      if err != nil {
+   // 5. Render all sub-package documentation files.
+   for _, pkgPath := range subPackagePaths {
+      pkgDoc := parsedDocs[pkgPath]
+      htmlOutputPath := filepath.Join(outputDir, pkgPath, "index.html")
+      if err := Render(pkgDoc, htmlOutputPath); err != nil {
          return err
       }
-   } else {
+   }
+
+   // 6. Prepare and render the root index.html.
+   rootDoc, rootExists := parsedDocs["."]
+   if !rootExists {
       rootDoc = &PackageDoc{
          Name:           filepath.Base(importPath),
          RepositoryURL:  repoURL,
          Version:        version,
          ImportPath:     importPath,
-         VCS:            vcs,
          StyleSheetPath: styleSheetPath,
       }
    }
-
    rootDoc.SubPackages = subPackageInfos
    indexPath := filepath.Join(outputDir, "index.html")
    return Render(rootDoc, indexPath)
+}
+
+// calculateStyleSheetPath determines the absolute URL path for the stylesheet.
+func calculateStyleSheetPath(importPath string) string {
+   var pathPrefix string
+   if parts := strings.SplitN(importPath, "/", 2); len(parts) > 1 {
+      pathPrefix = parts[1]
+   }
+   return filepath.ToSlash(filepath.Join("/", pathPrefix, "style.css"))
 }
 
 // findAllPackageDirs walks a directory and finds all subdirectories containing .go files.
@@ -99,10 +104,7 @@ func findAllPackageDirs(root string) ([]string, error) {
       if err != nil {
          return err
       }
-      if d.IsDir() && (strings.HasPrefix(d.Name(), ".") || d.Name() == "vendor") {
-         return filepath.SkipDir
-      }
-      if !d.IsDir() && strings.HasSuffix(d.Name(), ".go") && !strings.HasSuffix(d.Name(), "_test.go") {
+      if !d.IsDir() && strings.HasSuffix(d.Name(), ".go") {
          dir := filepath.Dir(path)
          relDir, _ := filepath.Rel(root, dir)
          packageSet[relDir] = struct{}{}
