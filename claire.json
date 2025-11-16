@@ -1,7 +1,7 @@
 {
    "import_path": "41.neocities.org/claire",
-   "input": "D:/github.com/claire",
+   "input": ".",
    "output": "D:/41.neocities.org/claire",
    "repository": "https://github.com/3052/claire",
-   "version": "v1.0.1"
+   "version": "v1.0.6"
 }

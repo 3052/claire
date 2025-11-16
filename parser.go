@@ -7,7 +7,9 @@ import (
    "go/doc"
    "go/format"
    "go/parser"
+   "go/scanner" // Added the missing import
    "go/token"
+   "html"
    "html/template"
    "os"
    "path/filepath"
@@ -15,7 +17,7 @@ import (
 )
 
 // Parse parses the Go package in the given directory and returns a PackageDoc.
-func Parse(dir, repoURL, version, importPath, vcs, styleSheetPath string) (*PackageDoc, error) {
+func Parse(dir, repoURL, version, importPath, styleSheetPath string) (*PackageDoc, error) {
    fset := token.NewFileSet()
    files, err := parseGoFiles(fset, dir)
    if err != nil {
@@ -40,7 +42,6 @@ func Parse(dir, repoURL, version, importPath, vcs, styleSheetPath string) (*Pack
       RepositoryURL:  repoURL,
       Version:        version,
       ImportPath:     importPath,
-      VCS:            vcs,
       StyleSheetPath: styleSheetPath,
       Doc:            p.Doc,
    }
@@ -93,8 +94,82 @@ func Parse(dir, repoURL, version, importPath, vcs, styleSheetPath string) (*Pack
    return pkgDoc, nil
 }
 
-// collectFromExpr recursively walks a type expression AST node and collects the offsets
-// of any identifiers that are known package types.
+// --- Internal Helpers ---
+
+func formatAndHighlight(node ast.Node, fset *token.FileSet, typeNames map[string]struct{}) (template.HTML, error) {
+   var buf bytes.Buffer
+   if err := format.Node(&buf, fset, node); err != nil {
+      return "", fmt.Errorf("failed to format node: %w", err)
+   }
+   sourceString := buf.String()
+
+   const prefix = "package p\n\n"
+   wrappedSource := prefix + sourceString
+
+   fsetForHighlighting := token.NewFileSet()
+   astFile, err := parser.ParseFile(fsetForHighlighting, "snippet.go", wrappedSource, 0)
+   if err != nil || len(astFile.Decls) == 0 {
+      return syntaxHighlight(sourceString, token.NewFileSet(), nil)
+   }
+   newRootNode := astFile.Decls[0]
+
+   rawOffsets := collectTypeUsageOffsets(newRootNode, fsetForHighlighting, typeNames)
+
+   adjustedOffsets := make(map[int]struct{})
+   for offset := range rawOffsets {
+      adjustedOffset := offset - len(prefix)
+      if adjustedOffset >= 0 {
+         adjustedOffsets[adjustedOffset] = struct{}{}
+      }
+   }
+   return syntaxHighlight(sourceString, fsetForHighlighting, adjustedOffsets)
+}
+
+func parseGoFiles(fset *token.FileSet, dir string) ([]*ast.File, error) {
+   entries, err := os.ReadDir(dir)
+   if err != nil {
+      return nil, err
+   }
+   var files []*ast.File
+   var packageName string
+   for _, entry := range entries {
+      if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
+         continue
+      }
+      path := filepath.Join(dir, entry.Name())
+      file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+      if err != nil {
+         return nil, err
+      }
+      if packageName == "" {
+         packageName = file.Name.Name
+      } else if file.Name.Name != packageName {
+         return nil, fmt.Errorf("multiple package names found in directory: %s and %s", packageName, file.Name.Name)
+      }
+      files = append(files, file)
+   }
+   return files, nil
+}
+
+func collectTypeUsageOffsets(rootNode ast.Node, fset *token.FileSet, typeNames map[string]struct{}) map[int]struct{} {
+   offsets := make(map[int]struct{})
+   ast.Inspect(rootNode, func(n ast.Node) bool {
+      if n == nil {
+         return false
+      }
+      switch x := n.(type) {
+      case *ast.ValueSpec:
+         collectFromExpr(x.Type, fset, typeNames, offsets)
+      case *ast.TypeSpec:
+         collectFromExpr(x.Type, fset, typeNames, offsets)
+      case *ast.Field:
+         collectFromExpr(x.Type, fset, typeNames, offsets)
+      }
+      return true
+   })
+   return offsets
+}
+
 func collectFromExpr(expr ast.Expr, fset *token.FileSet, typeNames map[string]struct{}, offsets map[int]struct{}) {
    if expr == nil {
       return
@@ -152,78 +227,73 @@ func collectFromExpr(expr ast.Expr, fset *token.FileSet, typeNames map[string]st
    }
 }
 
-// collectTypeUsageOffsets uses a top-level AST inspection to find all nodes
-// that contain type expressions, and then hands them off to the precise recursive walker.
-func collectTypeUsageOffsets(rootNode ast.Node, fset *token.FileSet, typeNames map[string]struct{}) map[int]struct{} {
-   offsets := make(map[int]struct{})
-   ast.Inspect(rootNode, func(n ast.Node) bool {
-      if n == nil {
-         return false
-      }
-      switch x := n.(type) {
-      case *ast.ValueSpec:
-         collectFromExpr(x.Type, fset, typeNames, offsets)
-      case *ast.TypeSpec:
-         collectFromExpr(x.Type, fset, typeNames, offsets)
-      case *ast.Field:
-         collectFromExpr(x.Type, fset, typeNames, offsets)
-      }
-      return true
-   })
-   return offsets
+// --- Syntax Highlighting Logic (previously in highlighter.go) ---
+
+var builtInTypes = map[string]struct{}{
+   "bool": {}, "byte": {}, "complex64": {}, "complex128": {},
+   "error": {}, "float32": {}, "float64": {}, "int": {}, "int8": {},
+   "int16": {}, "int32": {}, "int64": {}, "rune": {}, "string": {},
+   "uint": {}, "uint8": {}, "uint16": {}, "uint32": {}, "uint64": {},
+   "uintptr": {},
 }
 
-func formatAndHighlight(node ast.Node, fset *token.FileSet, typeNames map[string]struct{}) (template.HTML, error) {
-   var buf bytes.Buffer
-   if err := format.Node(&buf, fset, node); err != nil {
-      return "", fmt.Errorf("failed to format node: %w", err)
+func syntaxHighlight(source string, fset *token.FileSet, typeOffsets map[int]struct{}) (template.HTML, error) {
+   if fset == nil {
+      fset = token.NewFileSet()
    }
-   sourceString := buf.String()
+   file := fset.AddFile("", fset.Base(), len(source))
 
-   const prefix = "package p\n\n"
-   wrappedSource := prefix + sourceString
+   var s scanner.Scanner
+   s.Init(file, []byte(source), nil, scanner.ScanComments)
 
-   fsetForHighlighting := token.NewFileSet()
-   astFile, err := parser.ParseFile(fsetForHighlighting, "snippet.go", wrappedSource, 0)
-   if err != nil || len(astFile.Decls) == 0 {
-      return syntaxHighlight(sourceString, token.NewFileSet(), nil)
-   }
-   newRootNode := astFile.Decls[0]
+   var buf strings.Builder
+   lastOffset := 0
 
-   rawOffsets := collectTypeUsageOffsets(newRootNode, fsetForHighlighting, typeNames)
-
-   adjustedOffsets := make(map[int]struct{})
-   for offset := range rawOffsets {
-      adjustedOffset := offset - len(prefix)
-      if adjustedOffset >= 0 {
-         adjustedOffsets[adjustedOffset] = struct{}{}
+   for {
+      pos, tok, lit := s.Scan()
+      if tok == token.EOF {
+         break
       }
-   }
-   return syntaxHighlight(sourceString, fsetForHighlighting, adjustedOffsets)
-}
 
-func parseGoFiles(fset *token.FileSet, dir string) ([]*ast.File, error) {
-   entries, err := os.ReadDir(dir)
-   if err != nil {
-      return nil, err
+      offset := file.Offset(pos)
+      if lastOffset < offset {
+         buf.WriteString(html.EscapeString(source[lastOffset:offset]))
+      }
+
+      tokenText := lit
+      if tokenText == "" {
+         tokenText = tok.String()
+      }
+      escapedToken := html.EscapeString(tokenText)
+      var tokenHTML string
+
+      if tok == token.IDENT {
+         _, isTypeOffset := typeOffsets[offset]
+         _, isBuiltIn := builtInTypes[lit]
+         if isTypeOffset {
+            tokenHTML = fmt.Sprintf(`<a href="#%s">%s</a>`, escapedToken, escapedToken)
+         } else if isBuiltIn {
+            tokenHTML = fmt.Sprintf(`<span class="builtin">%s</span>`, escapedToken)
+         } else {
+            tokenHTML = escapedToken
+         }
+      } else if tok.IsKeyword() {
+         tokenHTML = fmt.Sprintf(`<span class="keyword">%s</span>`, escapedToken)
+      } else if tok == token.COMMENT {
+         tokenHTML = fmt.Sprintf(`<span class="comment">%s</span>`, escapedToken)
+      } else if tok == token.STRING {
+         tokenHTML = fmt.Sprintf(`<span class="string">%s</span>`, escapedToken)
+      } else {
+         tokenHTML = escapedToken
+      }
+      buf.WriteString(tokenHTML)
+
+      lastOffset = offset + len(tokenText)
    }
-   var files []*ast.File
-   var packageName string
-   for _, entry := range entries {
-      if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
-         continue
-      }
-      path := filepath.Join(dir, entry.Name())
-      file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
-      if err != nil {
-         return nil, err
-      }
-      if packageName == "" {
-         packageName = file.Name.Name
-      } else if file.Name.Name != packageName {
-         return nil, fmt.Errorf("multiple package names found in directory: %s and %s", packageName, file.Name.Name)
-      }
-      files = append(files, file)
+
+   if lastOffset < len(source) {
+      buf.WriteString(html.EscapeString(source[lastOffset:]))
    }
-   return files, nil
+
+   return template.HTML(buf.String()), nil
 }
