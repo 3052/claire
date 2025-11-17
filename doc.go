@@ -4,7 +4,7 @@ import (
    "io/fs"
    "log"
    "os"
-   "path" // Use the "path" package for URL-like paths
+   "path"
    "path/filepath"
    "sort"
    "strings"
@@ -46,11 +46,10 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
    var subPackageInfos []PackageInfo
    for _, pkgPath := range subPackagePaths {
       fullPath := filepath.Join(sourceDir, pkgPath)
-      // CORRECTED: Use path.Join for URL-like import paths to ensure forward slashes.
-      pkgImportPath := path.Join(importPath, filepath.ToSlash(pkgPath))
       pkgOutputDir := filepath.Join(outputDir, pkgPath)
 
-      pkgDoc, err := Parse(fullPath, repoURL, version, pkgImportPath, styleSheetPath)
+      // CORRECTED: Always pass the root importPath for the go-import meta tag.
+      pkgDoc, err := Parse(fullPath, repoURL, version, importPath, styleSheetPath)
       if err != nil {
          log.Printf("Skipping directory %s: %v", fullPath, err)
          continue
@@ -100,7 +99,6 @@ func calculateStyleSheetPath(importPath string) string {
    if parts := strings.SplitN(importPath, "/", 2); len(parts) > 1 {
       pathPrefix = parts[1]
    }
-   // CORRECTED: Use path.Join for URL paths.
    return path.Join("/", pathPrefix, "style.css")
 }
 

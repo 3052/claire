@@ -23,7 +23,7 @@ pre {
 }
 
 .comment {
-    color: chocolate;
+    color: firebrick;
 }
 
 .keyword {
@@ -32,7 +32,7 @@ pre {
 }
 
 .string {
-    color: firebrick;
+    /* No color is applied; defaults to standard text color. */
 }
 
 .builtin {
