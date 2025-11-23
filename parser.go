@@ -7,12 +7,13 @@ import (
    "go/doc"
    "go/format"
    "go/parser"
-   "go/scanner" // Added the missing import
+   "go/scanner"
    "go/token"
-   "html"
+   "html" // Added missing import
    "html/template"
    "os"
    "path/filepath"
+   "sort"
    "strings"
 )
 
@@ -66,6 +67,15 @@ func Parse(dir, repoURL, version, importPath, styleSheetPath string) (*PackageDo
          return nil, err
       }
       typeDoc := TypeDoc{Name: t.Name, Doc: t.Doc, Definition: def}
+
+      for _, f := range t.Funcs {
+         sig, err := process(f.Decl)
+         if err != nil {
+            return nil, err
+         }
+         pkgDoc.Functions = append(pkgDoc.Functions, FuncDoc{Name: f.Name, Doc: f.Doc, Signature: sig})
+      }
+
       for _, m := range t.Methods {
          sig, err := process(m.Decl)
          if err != nil {
@@ -91,6 +101,11 @@ func Parse(dir, repoURL, version, importPath, styleSheetPath string) (*PackageDo
       }
       pkgDoc.Variables = append(pkgDoc.Variables, VarDoc{Doc: v.Doc, Definition: def})
    }
+
+   sort.Slice(pkgDoc.Functions, func(i, j int) bool {
+      return pkgDoc.Functions[i].Name < pkgDoc.Functions[j].Name
+   })
+
    return pkgDoc, nil
 }
 
@@ -98,6 +113,7 @@ func Parse(dir, repoURL, version, importPath, styleSheetPath string) (*PackageDo
 
 func formatAndHighlight(node ast.Node, fset *token.FileSet, typeNames map[string]struct{}) (template.HTML, error) {
    var buf bytes.Buffer
+   // CORRECTED: Reverted to the standard go/format package.
    if err := format.Node(&buf, fset, node); err != nil {
       return "", fmt.Errorf("failed to format node: %w", err)
    }
@@ -227,7 +243,7 @@ func collectFromExpr(expr ast.Expr, fset *token.FileSet, typeNames map[string]st
    }
 }
 
-// --- Syntax Highlighting Logic (previously in highlighter.go) ---
+// --- Syntax Highlighting Logic ---
 
 var builtInTypes = map[string]struct{}{
    "bool": {}, "byte": {}, "complex64": {}, "complex128": {},
