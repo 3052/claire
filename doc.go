@@ -12,7 +12,6 @@ import (
 
 // Generate creates HTML documentation for all packages within a Go module.
 func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
-   // 1. Setup the output directory and the single stylesheet.
    if err := os.MkdirAll(outputDir, 0755); err != nil {
       return err
    }
@@ -22,10 +21,7 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
       return err
    }
 
-   // 2. Calculate the absolute path for the stylesheet link from the import path.
    styleSheetPath := calculateStyleSheetPath(importPath)
-
-   // 3. Discover all package directories within the module.
    allPackagePaths, err := findAllPackageDirs(sourceDir)
    if err != nil {
       return err
@@ -42,14 +38,13 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
    }
    sort.Strings(subPackagePaths)
 
-   // 4. Generate docs for all sub-packages.
    var subPackageInfos []PackageInfo
    for _, pkgPath := range subPackagePaths {
       fullPath := filepath.Join(sourceDir, pkgPath)
       pkgOutputDir := filepath.Join(outputDir, pkgPath)
 
-      // CORRECTED: Always pass the root importPath for the go-import meta tag.
-      pkgDoc, err := Parse(fullPath, repoURL, version, importPath, styleSheetPath)
+      // Parse the package without metadata first.
+      pkgDoc, err := Parse(fullPath)
       if err != nil {
          log.Printf("Skipping directory %s: %v", fullPath, err)
          continue
@@ -59,6 +54,12 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
          log.Printf("Skipping empty package: %s", fullPath)
          continue
       }
+
+      // Inject metadata.
+      pkgDoc.RepositoryURL = repoURL
+      pkgDoc.Version = version
+      pkgDoc.StyleSheetPath = styleSheetPath
+      pkgDoc.ImportPath = path.Join(importPath, filepath.ToSlash(pkgPath))
 
       htmlOutputPath := filepath.Join(pkgOutputDir, "index.html")
       if err := Render(pkgDoc, htmlOutputPath); err != nil {
@@ -71,29 +72,27 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
       })
    }
 
-   // 5. Generate the root index.html.
    var rootDoc *PackageDoc
    if rootPackageExists {
-      rootDoc, err = Parse(sourceDir, repoURL, version, importPath, styleSheetPath)
+      rootDoc, err = Parse(sourceDir)
       if err != nil {
          return err
       }
    } else {
-      rootDoc = &PackageDoc{
-         Name:           filepath.Base(importPath),
-         RepositoryURL:  repoURL,
-         Version:        version,
-         ImportPath:     importPath,
-         StyleSheetPath: styleSheetPath,
-      }
+      rootDoc = &PackageDoc{Name: filepath.Base(importPath)}
    }
 
+   // Inject metadata for the root package.
+   rootDoc.RepositoryURL = repoURL
+   rootDoc.Version = version
+   rootDoc.ImportPath = importPath
+   rootDoc.StyleSheetPath = styleSheetPath
    rootDoc.SubPackages = subPackageInfos
+
    indexPath := filepath.Join(outputDir, "index.html")
    return Render(rootDoc, indexPath)
 }
 
-// calculateStyleSheetPath determines the absolute URL path for the stylesheet.
 func calculateStyleSheetPath(importPath string) string {
    var pathPrefix string
    if parts := strings.SplitN(importPath, "/", 2); len(parts) > 1 {
@@ -102,7 +101,6 @@ func calculateStyleSheetPath(importPath string) string {
    return path.Join("/", pathPrefix, "style.css")
 }
 
-// findAllPackageDirs walks a directory and finds all subdirectories containing .go files.
 func findAllPackageDirs(root string) ([]string, error) {
    packageSet := make(map[string]struct{})
    err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -116,7 +114,6 @@ func findAllPackageDirs(root string) ([]string, error) {
       }
       return nil
    })
-
    packages := make([]string, 0, len(packageSet))
    for pkg := range packageSet {
       packages = append(packages, pkg)

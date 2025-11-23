@@ -1,40 +1,6 @@
 package claire
 
-import (
-   _ "embed"
-   "html/template"
-   "log"
-   "os"
-   "path/filepath"
-)
-
-//go:embed package.tmpl
-var packageTemplateFile string
-
-//go:embed style.css
-var styleFile string
-
-// Render generates the HTML documentation file using the embedded template.
-func Render(pkgDoc *PackageDoc, outputPath string) error {
-   // Parse the template directly from the embedded string variable.
-   tmpl, err := template.New("package").Parse(packageTemplateFile)
-   if err != nil {
-      return err
-   }
-
-   if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
-      return err
-   }
-
-   log.Printf("Creating file: %s", outputPath)
-   file, err := os.Create(outputPath)
-   if err != nil {
-      return err
-   }
-   defer file.Close()
-
-   return tmpl.Execute(file, pkgDoc)
-}
+import "html/template"
 
 // FuncDoc holds documentation for a single function or method.
 type FuncDoc struct {
@@ -54,6 +20,7 @@ type TypeDoc struct {
    Name       string
    Doc        string
    Definition template.HTML
+   Functions  []FuncDoc // Constructors/factory functions associated with this type.
    Methods    []FuncDoc
 }
 

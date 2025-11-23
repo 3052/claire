@@ -62,7 +62,7 @@
     {{if .Functions}}
     <h2 id="functions">Functions</h2>
     {{range .Functions}}
-        <pre>{{.Signature}}</pre>
+        <pre id="{{.Name}}">{{.Signature}}</pre>
         {{if .Doc}}<div class="doc"><p>{{.Doc}}</p></div>{{end}}
     {{end}}
     {{end}}
@@ -70,14 +70,23 @@
     {{if .Types}}
     <h2 id="types">Types</h2>
     {{range .Types}}
+        {{$typeName := .Name}}
         <h3 id="{{.Name}}">type {{.Name}}</h3>
         {{if .Doc}}<div class="doc"><p>{{.Doc}}</p></div>{{end}}
         <pre>{{.Definition}}</pre>
 
+        {{if .Functions}}
+            <h4>Functions</h4>
+            {{range .Functions}}
+                <pre id="{{.Name}}">{{.Signature}}</pre>
+                {{if .Doc}}<div class="doc"><p>{{.Doc}}</p></div>{{end}}
+            {{end}}
+        {{end}}
+
         {{if .Methods}}
             <h4>Methods</h4>
             {{range .Methods}}
-                <pre>{{.Signature}}</pre>
+                <pre id="{{$typeName}}.{{.Name}}">{{.Signature}}</pre>
                 {{if .Doc}}<div class="doc"><p>{{.Doc}}</p></div>{{end}}
             {{end}}
         {{end}}
