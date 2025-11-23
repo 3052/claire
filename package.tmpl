@@ -74,6 +74,14 @@
         {{if .Doc}}<div class="doc"><p>{{.Doc}}</p></div>{{end}}
         <pre>{{.Definition}}</pre>
 
+        {{if .Functions}}
+            <h4>Functions</h4>
+            {{range .Functions}}
+                <pre>{{.Signature}}</pre>
+                {{if .Doc}}<div class="doc"><p>{{.Doc}}</p></div>{{end}}
+            {{end}}
+        {{end}}
+
         {{if .Methods}}
             <h4>Methods</h4>
             {{range .Methods}}

@@ -9,16 +9,16 @@ import (
    "go/parser"
    "go/scanner"
    "go/token"
-   "html" // Added missing import
+   "html"
    "html/template"
    "os"
    "path/filepath"
-   "sort"
    "strings"
 )
 
 // Parse parses the Go package in the given directory and returns a PackageDoc.
-func Parse(dir, repoURL, version, importPath, styleSheetPath string) (*PackageDoc, error) {
+// It does not populate metadata fields like RepositoryURL or Version.
+func Parse(dir string) (*PackageDoc, error) {
    fset := token.NewFileSet()
    files, err := parseGoFiles(fset, dir)
    if err != nil {
@@ -39,26 +39,44 @@ func Parse(dir, repoURL, version, importPath, styleSheetPath string) (*PackageDo
    }
 
    pkgDoc := &PackageDoc{
-      Name:           p.Name,
-      RepositoryURL:  repoURL,
-      Version:        version,
-      ImportPath:     importPath,
-      StyleSheetPath: styleSheetPath,
-      Doc:            p.Doc,
+      Name: p.Name,
+      Doc:  p.Doc,
    }
+
+   // -- Helpers to reduce boilerplate --
 
    process := func(decl ast.Decl) (template.HTML, error) {
       return formatAndHighlight(decl, fset, typeNames)
    }
 
-   for _, f := range p.Funcs {
-      if f.Recv == "" {
+   processFuncs := func(funcs []*doc.Func) ([]FuncDoc, error) {
+      var docs []FuncDoc
+      for _, f := range funcs {
          sig, err := process(f.Decl)
          if err != nil {
             return nil, err
          }
-         pkgDoc.Functions = append(pkgDoc.Functions, FuncDoc{Name: f.Name, Doc: f.Doc, Signature: sig})
+         docs = append(docs, FuncDoc{Name: f.Name, Doc: f.Doc, Signature: sig})
       }
+      return docs, nil
+   }
+
+   processValues := func(values []*doc.Value) ([]VarDoc, error) {
+      var docs []VarDoc
+      for _, v := range values {
+         def, err := process(v.Decl)
+         if err != nil {
+            return nil, err
+         }
+         docs = append(docs, VarDoc{Doc: v.Doc, Definition: def})
+      }
+      return docs, nil
+   }
+
+   // -- Processing --
+
+   if pkgDoc.Functions, err = processFuncs(p.Funcs); err != nil {
+      return nil, err
    }
 
    for _, t := range p.Types {
@@ -68,43 +86,21 @@ func Parse(dir, repoURL, version, importPath, styleSheetPath string) (*PackageDo
       }
       typeDoc := TypeDoc{Name: t.Name, Doc: t.Doc, Definition: def}
 
-      for _, f := range t.Funcs {
-         sig, err := process(f.Decl)
-         if err != nil {
-            return nil, err
-         }
-         pkgDoc.Functions = append(pkgDoc.Functions, FuncDoc{Name: f.Name, Doc: f.Doc, Signature: sig})
+      if typeDoc.Functions, err = processFuncs(t.Funcs); err != nil {
+         return nil, err
       }
-
-      for _, m := range t.Methods {
-         sig, err := process(m.Decl)
-         if err != nil {
-            return nil, err
-         }
-         typeDoc.Methods = append(typeDoc.Methods, FuncDoc{Name: m.Name, Doc: m.Doc, Signature: sig})
+      if typeDoc.Methods, err = processFuncs(t.Methods); err != nil {
+         return nil, err
       }
       pkgDoc.Types = append(pkgDoc.Types, typeDoc)
    }
 
-   for _, v := range p.Consts {
-      def, err := process(v.Decl)
-      if err != nil {
-         return nil, err
-      }
-      pkgDoc.Constants = append(pkgDoc.Constants, VarDoc{Doc: v.Doc, Definition: def})
+   if pkgDoc.Constants, err = processValues(p.Consts); err != nil {
+      return nil, err
    }
-
-   for _, v := range p.Vars {
-      def, err := process(v.Decl)
-      if err != nil {
-         return nil, err
-      }
-      pkgDoc.Variables = append(pkgDoc.Variables, VarDoc{Doc: v.Doc, Definition: def})
+   if pkgDoc.Variables, err = processValues(p.Vars); err != nil {
+      return nil, err
    }
-
-   sort.Slice(pkgDoc.Functions, func(i, j int) bool {
-      return pkgDoc.Functions[i].Name < pkgDoc.Functions[j].Name
-   })
 
    return pkgDoc, nil
 }
@@ -113,7 +109,6 @@ func Parse(dir, repoURL, version, importPath, styleSheetPath string) (*PackageDo
 
 func formatAndHighlight(node ast.Node, fset *token.FileSet, typeNames map[string]struct{}) (template.HTML, error) {
    var buf bytes.Buffer
-   // CORRECTED: Reverted to the standard go/format package.
    if err := format.Node(&buf, fset, node); err != nil {
       return "", fmt.Errorf("failed to format node: %w", err)
    }
@@ -186,6 +181,15 @@ func collectTypeUsageOffsets(rootNode ast.Node, fset *token.FileSet, typeNames m
    return offsets
 }
 
+func collectFromFields(fields *ast.FieldList, fset *token.FileSet, typeNames map[string]struct{}, offsets map[int]struct{}) {
+   if fields == nil {
+      return
+   }
+   for _, field := range fields.List {
+      collectFromExpr(field.Type, fset, typeNames, offsets)
+   }
+}
+
 func collectFromExpr(expr ast.Expr, fset *token.FileSet, typeNames map[string]struct{}, offsets map[int]struct{}) {
    if expr == nil {
       return
@@ -208,28 +212,12 @@ func collectFromExpr(expr ast.Expr, fset *token.FileSet, typeNames map[string]st
    case *ast.ChanType:
       collectFromExpr(x.Value, fset, typeNames, offsets)
    case *ast.FuncType:
-      if x.Params != nil {
-         for _, field := range x.Params.List {
-            collectFromExpr(field.Type, fset, typeNames, offsets)
-         }
-      }
-      if x.Results != nil {
-         for _, field := range x.Results.List {
-            collectFromExpr(field.Type, fset, typeNames, offsets)
-         }
-      }
+      collectFromFields(x.Params, fset, typeNames, offsets)
+      collectFromFields(x.Results, fset, typeNames, offsets)
    case *ast.StructType:
-      if x.Fields != nil {
-         for _, field := range x.Fields.List {
-            collectFromExpr(field.Type, fset, typeNames, offsets)
-         }
-      }
+      collectFromFields(x.Fields, fset, typeNames, offsets)
    case *ast.InterfaceType:
-      if x.Methods != nil {
-         for _, field := range x.Methods.List {
-            collectFromExpr(field.Type, fset, typeNames, offsets)
-         }
-      }
+      collectFromFields(x.Methods, fset, typeNames, offsets)
    case *ast.SelectorExpr:
       collectFromExpr(x.X, fset, typeNames, offsets)
    case *ast.IndexExpr:
