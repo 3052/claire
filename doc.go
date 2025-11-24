@@ -62,7 +62,9 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
       pkgDoc.ImportPath = path.Join(importPath, filepath.ToSlash(pkgPath))
 
       htmlOutputPath := filepath.Join(pkgOutputDir, "index.html")
-      if err := Render(pkgDoc, htmlOutputPath); err != nil {
+
+      // CORRECTED: Calling Render as a method
+      if err := pkgDoc.Render(htmlOutputPath); err != nil {
          return err
       }
 
@@ -90,7 +92,9 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
    rootDoc.SubPackages = subPackageInfos
 
    indexPath := filepath.Join(outputDir, "index.html")
-   return Render(rootDoc, indexPath)
+
+   // CORRECTED: Calling Render as a method
+   return rootDoc.Render(indexPath)
 }
 
 func calculateStyleSheetPath(importPath string) string {

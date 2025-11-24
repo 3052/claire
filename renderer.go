@@ -8,7 +8,7 @@ import (
 )
 
 // Render generates the HTML documentation file using the embedded template.
-func Render(pkgDoc *PackageDoc, outputPath string) error {
+func (pkgDoc *PackageDoc) Render(outputPath string) error {
    // Parse the template directly from the embedded string variable.
    tmpl, err := template.New("package").Parse(packageTemplateFile)
    if err != nil {
