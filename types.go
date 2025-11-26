@@ -24,12 +24,6 @@ type TypeDoc struct {
    Methods    []FuncDoc
 }
 
-// PackageInfo holds metadata for a single sub-package within a module.
-type PackageInfo struct {
-   Name string
-   Path string
-}
-
 // PackageDoc holds all the documentation for a single package.
 type PackageDoc struct {
    Name           string
@@ -42,7 +36,7 @@ type PackageDoc struct {
    Types          []TypeDoc
    Variables      []VarDoc
    Constants      []VarDoc
-   SubPackages    []PackageInfo
+   SubPackages    []string
 }
 
 // IsEmpty reports whether the package documentation is empty (has no content).

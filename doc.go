@@ -38,7 +38,7 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
    }
    sort.Strings(subPackagePaths)
 
-   var subPackageInfos []PackageInfo
+   var subPackages []string
    for _, pkgPath := range subPackagePaths {
       fullPath := filepath.Join(sourceDir, pkgPath)
       pkgOutputDir := filepath.Join(outputDir, pkgPath)
@@ -62,16 +62,11 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
       pkgDoc.ImportPath = path.Join(importPath, filepath.ToSlash(pkgPath))
 
       htmlOutputPath := filepath.Join(pkgOutputDir, "index.html")
-
-      // CORRECTED: Calling Render as a method
       if err := pkgDoc.Render(htmlOutputPath); err != nil {
          return err
       }
 
-      subPackageInfos = append(subPackageInfos, PackageInfo{
-         Name: pkgDoc.Name,
-         Path: filepath.ToSlash(pkgPath),
-      })
+      subPackages = append(subPackages, filepath.ToSlash(pkgPath))
    }
 
    var rootDoc *PackageDoc
@@ -89,11 +84,9 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
    rootDoc.Version = version
    rootDoc.ImportPath = importPath
    rootDoc.StyleSheetPath = styleSheetPath
-   rootDoc.SubPackages = subPackageInfos
+   rootDoc.SubPackages = subPackages
 
    indexPath := filepath.Join(outputDir, "index.html")
-
-   // CORRECTED: Calling Render as a method
    return rootDoc.Render(indexPath)
 }
 
