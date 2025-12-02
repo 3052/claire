@@ -80,11 +80,11 @@ func main() {
       var set flag_set
       err := set.New(*name)
       if err != nil {
-         panic(err)
+         log.Fatal(err)
       }
       err = set.do()
       if err != nil {
-         panic(err)
+         log.Fatal(err)
       }
    } else {
       flag.Usage()
