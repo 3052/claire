@@ -40,10 +40,10 @@ type PackageDoc struct {
 }
 
 // IsEmpty reports whether the package documentation is empty (has no content).
-func (p *PackageDoc) IsEmpty() bool {
-   return p.Doc == "" &&
-      len(p.Constants) == 0 &&
-      len(p.Variables) == 0 &&
-      len(p.Functions) == 0 &&
-      len(p.Types) == 0
+func (pkgDoc *PackageDoc) IsEmpty() bool {
+   return pkgDoc.Doc == "" &&
+      len(pkgDoc.Constants) == 0 &&
+      len(pkgDoc.Variables) == 0 &&
+      len(pkgDoc.Functions) == 0 &&
+      len(pkgDoc.Types) == 0
 }

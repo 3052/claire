@@ -44,8 +44,8 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
       pkgOutputDir := filepath.Join(outputDir, pkgPath)
 
       // Parse the package without metadata first.
-      pkgDoc, err := Parse(fullPath)
-      if err != nil {
+      pkgDoc := &PackageDoc{}
+      if err := pkgDoc.Parse(fullPath); err != nil {
          log.Printf("Skipping directory %s: %v", fullPath, err)
          continue
       }
@@ -65,14 +65,13 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
       if err := pkgDoc.Render(htmlOutputPath); err != nil {
          return err
       }
-
       subPackages = append(subPackages, filepath.ToSlash(pkgPath))
    }
 
    var rootDoc *PackageDoc
    if rootPackageExists {
-      rootDoc, err = Parse(sourceDir)
-      if err != nil {
+      rootDoc = &PackageDoc{}
+      if err = rootDoc.Parse(sourceDir); err != nil {
          return err
       }
    } else {
@@ -111,6 +110,7 @@ func findAllPackageDirs(root string) ([]string, error) {
       }
       return nil
    })
+
    packages := make([]string, 0, len(packageSet))
    for pkg := range packageSet {
       packages = append(packages, pkg)

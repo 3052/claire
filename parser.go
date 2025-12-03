@@ -16,21 +16,21 @@ import (
    "strings"
 )
 
-// Parse parses the Go package in the given directory and returns a PackageDoc.
+// Parse parses the Go package in the given directory and populates the PackageDoc.
 // It does not populate metadata fields like RepositoryURL or Version.
-func Parse(dir string) (*PackageDoc, error) {
+func (pkgDoc *PackageDoc) Parse(inputPath string) error {
    fset := token.NewFileSet()
-   files, err := parseGoFiles(fset, dir)
+   files, err := parseGoFiles(fset, inputPath)
    if err != nil {
-      return nil, err
+      return err
    }
    if len(files) == 0 {
-      return nil, fmt.Errorf("no Go source files found in directory: %s", dir)
+      return fmt.Errorf("no Go source files found in directory: %s", inputPath)
    }
 
    p, err := doc.NewFromFiles(fset, files, "./")
    if err != nil {
-      return nil, fmt.Errorf("failed to create doc package: %w", err)
+      return fmt.Errorf("failed to create doc package: %w", err)
    }
 
    typeNames := make(map[string]struct{})
@@ -38,13 +38,10 @@ func Parse(dir string) (*PackageDoc, error) {
       typeNames[t.Name] = struct{}{}
    }
 
-   pkgDoc := &PackageDoc{
-      Name: p.Name,
-      Doc:  p.Doc,
-   }
+   pkgDoc.Name = p.Name
+   pkgDoc.Doc = p.Doc
 
    // -- Helpers to reduce boilerplate --
-
    process := func(decl ast.Decl) (template.HTML, error) {
       return formatAndHighlight(decl, fset, typeNames)
    }
@@ -74,35 +71,35 @@ func Parse(dir string) (*PackageDoc, error) {
    }
 
    // -- Processing --
-
    if pkgDoc.Functions, err = processFuncs(p.Funcs); err != nil {
-      return nil, err
+      return err
    }
 
    for _, t := range p.Types {
       def, err := process(t.Decl)
       if err != nil {
-         return nil, err
+         return err
       }
       typeDoc := TypeDoc{Name: t.Name, Doc: t.Doc, Definition: def}
 
       if typeDoc.Functions, err = processFuncs(t.Funcs); err != nil {
-         return nil, err
+         return err
       }
       if typeDoc.Methods, err = processFuncs(t.Methods); err != nil {
-         return nil, err
+         return err
       }
       pkgDoc.Types = append(pkgDoc.Types, typeDoc)
    }
 
    if pkgDoc.Constants, err = processValues(p.Consts); err != nil {
-      return nil, err
-   }
-   if pkgDoc.Variables, err = processValues(p.Vars); err != nil {
-      return nil, err
+      return err
    }
 
-   return pkgDoc, nil
+   if pkgDoc.Variables, err = processValues(p.Vars); err != nil {
+      return err
+   }
+
+   return nil
 }
 
 // --- Internal Helpers ---
@@ -112,8 +109,8 @@ func formatAndHighlight(node ast.Node, fset *token.FileSet, typeNames map[string
    if err := format.Node(&buf, fset, node); err != nil {
       return "", fmt.Errorf("failed to format node: %w", err)
    }
-   sourceString := buf.String()
 
+   sourceString := buf.String()
    const prefix = "package p\n\n"
    wrappedSource := prefix + sourceString
 
@@ -122,17 +119,18 @@ func formatAndHighlight(node ast.Node, fset *token.FileSet, typeNames map[string
    if err != nil || len(astFile.Decls) == 0 {
       return syntaxHighlight(sourceString, token.NewFileSet(), nil)
    }
+
    newRootNode := astFile.Decls[0]
-
    rawOffsets := collectTypeUsageOffsets(newRootNode, fsetForHighlighting, typeNames)
-
    adjustedOffsets := make(map[int]struct{})
+
    for offset := range rawOffsets {
       adjustedOffset := offset - len(prefix)
       if adjustedOffset >= 0 {
          adjustedOffsets[adjustedOffset] = struct{}{}
       }
    }
+
    return syntaxHighlight(sourceString, fsetForHighlighting, adjustedOffsets)
 }
 
@@ -141,24 +139,30 @@ func parseGoFiles(fset *token.FileSet, dir string) ([]*ast.File, error) {
    if err != nil {
       return nil, err
    }
+
    var files []*ast.File
    var packageName string
+
    for _, entry := range entries {
       if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
          continue
       }
+
       path := filepath.Join(dir, entry.Name())
       file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
       if err != nil {
          return nil, err
       }
+
       if packageName == "" {
          packageName = file.Name.Name
       } else if file.Name.Name != packageName {
          return nil, fmt.Errorf("multiple package names found in directory: %s and %s", packageName, file.Name.Name)
       }
+
       files = append(files, file)
    }
+
    return files, nil
 }
 
@@ -246,7 +250,6 @@ func syntaxHighlight(source string, fset *token.FileSet, typeOffsets map[int]str
       fset = token.NewFileSet()
    }
    file := fset.AddFile("", fset.Base(), len(source))
-
    var s scanner.Scanner
    s.Init(file, []byte(source), nil, scanner.ScanComments)
 
@@ -268,12 +271,14 @@ func syntaxHighlight(source string, fset *token.FileSet, typeOffsets map[int]str
       if tokenText == "" {
          tokenText = tok.String()
       }
+
       escapedToken := html.EscapeString(tokenText)
       var tokenHTML string
 
       if tok == token.IDENT {
          _, isTypeOffset := typeOffsets[offset]
          _, isBuiltIn := builtInTypes[lit]
+
          if isTypeOffset {
             tokenHTML = fmt.Sprintf(`<a href="#%s">%s</a>`, escapedToken, escapedToken)
          } else if isBuiltIn {
@@ -290,8 +295,8 @@ func syntaxHighlight(source string, fset *token.FileSet, typeOffsets map[int]str
       } else {
          tokenHTML = escapedToken
       }
-      buf.WriteString(tokenHTML)
 
+      buf.WriteString(tokenHTML)
       lastOffset = offset + len(tokenText)
    }
 
