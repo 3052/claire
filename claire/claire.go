@@ -10,7 +10,7 @@ import (
    "path/filepath"
 )
 
-type flag_set struct {
+type command struct {
    ImportPath string `json:"import_path"`
    Input      string
    Output     string
@@ -18,7 +18,7 @@ type flag_set struct {
    Version    string
 }
 
-func (f *flag_set) do() error {
+func (f *command) do() error {
    log.Println("RemoveAll", f.Output)
    err := os.RemoveAll(f.Output)
    if err != nil {
@@ -45,7 +45,7 @@ func (f *flag_set) do() error {
    return nil
 }
 
-func (f *flag_set) New(name string) error {
+func (f *command) New(name string) error {
    data, err := os.ReadFile(name)
    if err != nil {
       return err
@@ -77,7 +77,7 @@ func main() {
    name := flag.String("n", "", "name")
    flag.Parse()
    if *name != "" {
-      var set flag_set
+      var set command
       err := set.New(*name)
       if err != nil {
          log.Fatal(err)
