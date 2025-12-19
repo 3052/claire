@@ -10,6 +10,20 @@ import (
    "path/filepath"
 )
 
+func main() {
+   log.SetFlags(log.Ltime)
+   name := flag.String("n", "", "name")
+   flag.Parse()
+   if *name != "" {
+      err := new(command).do(*name)
+      if err != nil {
+         log.Fatal(err)
+      }
+   } else {
+      flag.Usage()
+   }
+}
+
 type command struct {
    ImportPath string `json:"import_path"`
    Input      string
@@ -18,14 +32,37 @@ type command struct {
    Version    string
 }
 
-func (f *command) do() error {
-   log.Println("RemoveAll", f.Output)
-   err := os.RemoveAll(f.Output)
+func (c *command) do(name string) error {
+   data, err := os.ReadFile(name)
+   if err != nil {
+      return err
+   }
+   err = json.Unmarshal(data, c)
+   if err != nil {
+      return err
+   }
+   if c.ImportPath == "" {
+      return errors.New("import_path")
+   }
+   if c.Input == "" {
+      return errors.New("input")
+   }
+   if c.Output == "" {
+      return errors.New("output")
+   }
+   if c.Repository == "" {
+      return errors.New("repository")
+   }
+   if c.Version == "" {
+      return errors.New("version")
+   }
+   log.Println("RemoveAll", c.Output)
+   err = os.RemoveAll(c.Output)
    if err != nil {
       return err
    }
    err = claire.Generate(
-      f.Input, f.Output, f.Repository, f.Version, f.ImportPath,
+      c.Input, c.Output, c.Repository, c.Version, c.ImportPath,
    )
    if err != nil {
       return err
@@ -36,57 +73,11 @@ func (f *command) do() error {
       "style.css",
    }
    for _, file := range files_to_check {
-      output_file := filepath.Join(f.Output, file)
+      output_file := filepath.Join(c.Output, file)
       _, err = os.Stat(output_file)
       if err != nil {
          return err
       }
    }
    return nil
-}
-
-func (f *command) New(name string) error {
-   data, err := os.ReadFile(name)
-   if err != nil {
-      return err
-   }
-   err = json.Unmarshal(data, f)
-   if err != nil {
-      return err
-   }
-   if f.ImportPath == "" {
-      return errors.New("import_path")
-   }
-   if f.Input == "" {
-      return errors.New("input")
-   }
-   if f.Output == "" {
-      return errors.New("output")
-   }
-   if f.Repository == "" {
-      return errors.New("repository")
-   }
-   if f.Version == "" {
-      return errors.New("version")
-   }
-   return nil
-}
-
-func main() {
-   log.SetFlags(log.Ltime)
-   name := flag.String("n", "", "name")
-   flag.Parse()
-   if *name != "" {
-      var set command
-      err := set.New(*name)
-      if err != nil {
-         log.Fatal(err)
-      }
-      err = set.do()
-      if err != nil {
-         log.Fatal(err)
-      }
-   } else {
-      flag.Usage()
-   }
 }
