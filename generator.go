@@ -20,13 +20,11 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
    if err := os.WriteFile(cssDestPath, []byte(styleFile), 0644); err != nil {
       return err
    }
-
    styleSheetPath := calculateStyleSheetPath(importPath)
    allPackagePaths, err := findAllPackageDirs(sourceDir)
    if err != nil {
       return err
    }
-
    var rootPackageExists bool
    var subPackagePaths []string
    for _, p := range allPackagePaths {
@@ -37,37 +35,31 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
       }
    }
    sort.Strings(subPackagePaths)
-
    var subPackages []string
    for _, pkgPath := range subPackagePaths {
       fullPath := filepath.Join(sourceDir, pkgPath)
       pkgOutputDir := filepath.Join(outputDir, pkgPath)
-
       // Parse the package without metadata first.
       pkgDoc := &PackageDoc{}
       if err := pkgDoc.Parse(fullPath); err != nil {
          log.Printf("Skipping directory %s: %v", fullPath, err)
          continue
       }
-
       if pkgDoc.IsEmpty() {
          log.Printf("Skipping empty package: %s", fullPath)
          continue
       }
-
       // Inject metadata.
       pkgDoc.RepositoryURL = repoURL
       pkgDoc.Version = version
       pkgDoc.StyleSheetPath = styleSheetPath
       pkgDoc.ImportPath = path.Join(importPath, filepath.ToSlash(pkgPath))
-
       htmlOutputPath := filepath.Join(pkgOutputDir, "index.html")
       if err := pkgDoc.Render(htmlOutputPath); err != nil {
          return err
       }
       subPackages = append(subPackages, filepath.ToSlash(pkgPath))
    }
-
    var rootDoc *PackageDoc
    if rootPackageExists {
       rootDoc = &PackageDoc{}
@@ -77,14 +69,12 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
    } else {
       rootDoc = &PackageDoc{Name: filepath.Base(importPath)}
    }
-
    // Inject metadata for the root package.
    rootDoc.RepositoryURL = repoURL
    rootDoc.Version = version
    rootDoc.ImportPath = importPath
    rootDoc.StyleSheetPath = styleSheetPath
    rootDoc.SubPackages = subPackages
-
    indexPath := filepath.Join(outputDir, "index.html")
    return rootDoc.Render(indexPath)
 }
@@ -110,7 +100,6 @@ func findAllPackageDirs(root string) ([]string, error) {
       }
       return nil
    })
-
    packages := make([]string, 0, len(packageSet))
    for pkg := range packageSet {
       packages = append(packages, pkg)

@@ -14,11 +14,12 @@
         {{if .Version}}
             <span class="version-info">({{.Version}})</span>
         {{end}}
+        <span class="meta-link">[<a href="../">up</a>]</span>
         {{if .RepositoryURL}}
-            <span class="repository-link">[<a href="{{.RepositoryURL}}" target="_blank" rel="noopener">repository</a>]</span>
+            <span class="meta-link">[<a href="{{.RepositoryURL}}" target="_blank" rel="noopener">repository</a>]</span>
         {{end}}
     </h1>
-    <div class="nav-up"><a href="../">Up</a></div>
+
     {{if .Doc}}
     <div class="doc">
         <pre>{{.Doc}}</pre>

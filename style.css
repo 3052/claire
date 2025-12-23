@@ -47,13 +47,12 @@ pre {
     margin-left: 1em;
 }
 
-.repository-link {
-    font-size: 0.8em;
+/* 
+   Shared style for 'up' and 'repository' links.
+   1.25rem is larger than body text but smaller than the full H1 scaling.
+*/
+.meta-link {
+    font-size: 1.25rem;
     font-weight: normal;
     margin-left: 1em;
-}
-
-.nav-up {
-    margin-bottom: 1.5em;
-    font-size: 0.9em;
 }
