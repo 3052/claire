@@ -6,7 +6,7 @@ import (
    "os"
    "path"
    "path/filepath"
-   "sort"
+   "slices"
    "strings"
 )
 
@@ -34,7 +34,7 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
          subPackagePaths = append(subPackagePaths, p)
       }
    }
-   sort.Strings(subPackagePaths)
+   slices.Sort(subPackagePaths)
    var subPackages []string
    for _, pkgPath := range subPackagePaths {
       fullPath := filepath.Join(sourceDir, pkgPath)
