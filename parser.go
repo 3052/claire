@@ -12,6 +12,32 @@ import (
    "strings"
 )
 
+func parseGoFiles(fset *token.FileSet, dir string) ([]*ast.File, error) {
+   entries, err := os.ReadDir(dir)
+   if err != nil {
+      return nil, err
+   }
+   var files []*ast.File
+   var packageName string
+   for _, entry := range entries {
+      if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
+         continue
+      }
+      path := filepath.Join(dir, entry.Name())
+      file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+      if err != nil {
+         return nil, err
+      }
+      if packageName == "" {
+         packageName = file.Name.Name
+      } else if file.Name.Name != packageName {
+         return nil, fmt.Errorf("multiple package names found in directory: %s and %s", packageName, file.Name.Name)
+      }
+      files = append(files, file)
+   }
+   return files, nil
+}
+
 // Parse parses the Go package in the given directory and populates the PackageDoc.
 // It does not populate metadata fields like RepositoryURL or Version.
 func (pkgDoc *PackageDoc) Parse(inputPath string) error {
@@ -84,30 +110,4 @@ func (pkgDoc *PackageDoc) Parse(inputPath string) error {
       return err
    }
    return nil
-}
-
-func parseGoFiles(fset *token.FileSet, dir string) ([]*ast.File, error) {
-   entries, err := os.ReadDir(dir)
-   if err != nil {
-      return nil, err
-   }
-   var files []*ast.File
-   var packageName string
-   for _, entry := range entries {
-      if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
-         continue
-      }
-      path := filepath.Join(dir, entry.Name())
-      file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
-      if err != nil {
-         return nil, err
-      }
-      if packageName == "" {
-         packageName = file.Name.Name
-      } else if file.Name.Name != packageName {
-         return nil, fmt.Errorf("multiple package names found in directory: %s and %s", packageName, file.Name.Name)
-      }
-      files = append(files, file)
-   }
-   return files, nil
 }
