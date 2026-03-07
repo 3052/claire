@@ -106,8 +106,6 @@ func (pkgDoc *PackageDoc) Parse(inputPath string) error {
    if pkgDoc.Constants, err = processValues(p.Consts); err != nil {
       return err
    }
-   if pkgDoc.Variables, err = processValues(p.Vars); err != nil {
-      return err
-   }
-   return nil
+   pkgDoc.Variables, err = processValues(p.Vars)
+   return err
 }
