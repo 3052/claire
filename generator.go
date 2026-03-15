@@ -1,3 +1,4 @@
+// generator.go
 package claire
 
 import (

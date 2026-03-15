@@ -1,3 +1,4 @@
+// types.go
 package claire
 
 import "html/template"
@@ -20,6 +21,8 @@ type TypeDoc struct {
    Name       string
    Doc        string
    Definition template.HTML
+   Constants  []VarDoc  // Constants grouped under this type
+   Variables  []VarDoc  // Variables grouped under this type
    Functions  []FuncDoc // Constructors/factory functions associated with this type.
    Methods    []FuncDoc
 }

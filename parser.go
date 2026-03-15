@@ -1,3 +1,4 @@
+// parser.go
 package claire
 
 import (
@@ -59,10 +60,12 @@ func (pkgDoc *PackageDoc) Parse(inputPath string) error {
    }
    pkgDoc.Name = p.Name
    pkgDoc.Doc = p.Doc
+
    // -- Helpers to reduce boilerplate --
    process := func(decl ast.Decl) (template.HTML, error) {
       return formatAndHighlight(decl, fset, typeNames)
    }
+
    processFuncs := func(funcs []*doc.Func) ([]FuncDoc, error) {
       var docs []FuncDoc
       for _, f := range funcs {
@@ -74,6 +77,7 @@ func (pkgDoc *PackageDoc) Parse(inputPath string) error {
       }
       return docs, nil
    }
+
    processValues := func(values []*doc.Value) ([]VarDoc, error) {
       var docs []VarDoc
       for _, v := range values {
@@ -85,16 +89,27 @@ func (pkgDoc *PackageDoc) Parse(inputPath string) error {
       }
       return docs, nil
    }
+
    // -- Processing --
    if pkgDoc.Functions, err = processFuncs(p.Funcs); err != nil {
       return err
    }
+
    for _, t := range p.Types {
       def, err := process(t.Decl)
       if err != nil {
          return err
       }
       typeDoc := TypeDoc{Name: t.Name, Doc: t.Doc, Definition: def}
+
+      // Map constants and variables explicitly grouped under this type
+      if typeDoc.Constants, err = processValues(t.Consts); err != nil {
+         return err
+      }
+      if typeDoc.Variables, err = processValues(t.Vars); err != nil {
+         return err
+      }
+
       if typeDoc.Functions, err = processFuncs(t.Funcs); err != nil {
          return err
       }
@@ -103,9 +118,12 @@ func (pkgDoc *PackageDoc) Parse(inputPath string) error {
       }
       pkgDoc.Types = append(pkgDoc.Types, typeDoc)
    }
+
+   // Map untyped / base-level constants and variables
    if pkgDoc.Constants, err = processValues(p.Consts); err != nil {
       return err
    }
    pkgDoc.Variables, err = processValues(p.Vars)
+
    return err
 }

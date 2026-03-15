@@ -76,6 +76,22 @@
         {{if .Doc}}<div class="doc"><p>{{.Doc}}</p></div>{{end}}
         <pre>{{.Definition}}</pre>
 
+        {{if .Constants}}
+            <h4>Constants</h4>
+            {{range .Constants}}
+                <pre>{{.Definition}}</pre>
+                {{if .Doc}}<div class="doc"><p>{{.Doc}}</p></div>{{end}}
+            {{end}}
+        {{end}}
+
+        {{if .Variables}}
+            <h4>Variables</h4>
+            {{range .Variables}}
+                <pre>{{.Definition}}</pre>
+                {{if .Doc}}<div class="doc"><p>{{.Doc}}</p></div>{{end}}
+            {{end}}
+        {{end}}
+
         {{if .Functions}}
             <h4>Functions</h4>
             {{range .Functions}}

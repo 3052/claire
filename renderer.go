@@ -1,3 +1,4 @@
+// renderer.go
 package claire
 
 import (

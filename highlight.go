@@ -1,3 +1,4 @@
+// highlight.go
 package claire
 
 import (
