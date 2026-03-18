@@ -10,12 +10,6 @@ type FuncDoc struct {
    Signature template.HTML
 }
 
-// VarDoc holds documentation for a variable or constant declaration.
-type VarDoc struct {
-   Doc        string
-   Definition template.HTML
-}
-
 // TypeDoc holds documentation for a type definition and its methods.
 type TypeDoc struct {
    Name       string
@@ -26,6 +20,14 @@ type TypeDoc struct {
    Functions  []FuncDoc // Constructors/factory functions associated with this type.
    Methods    []FuncDoc
 }
+
+// VarDoc holds documentation for a variable or constant declaration.
+type VarDoc struct {
+   Doc        string
+   Definition template.HTML
+}
+
+///
 
 // PackageDoc holds all the documentation for a single package.
 type PackageDoc struct {
