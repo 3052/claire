@@ -10,6 +10,21 @@ type FuncDoc struct {
    Signature template.HTML
 }
 
+// PackageDoc holds all the documentation for a single package.
+type PackageDoc struct {
+   Name           string
+   RepositoryURL  string
+   Version        string
+   ImportPath     string
+   StyleSheetPath string
+   Doc            string
+   Functions      []FuncDoc
+   Types          []TypeDoc
+   Variables      []VarDoc
+   Constants      []VarDoc
+   SubPackages    []string
+}
+
 // TypeDoc holds documentation for a type definition and its methods.
 type TypeDoc struct {
    Name       string
@@ -28,21 +43,6 @@ type VarDoc struct {
 }
 
 ///
-
-// PackageDoc holds all the documentation for a single package.
-type PackageDoc struct {
-   Name           string
-   RepositoryURL  string
-   Version        string
-   ImportPath     string
-   StyleSheetPath string
-   Doc            string
-   Functions      []FuncDoc
-   Types          []TypeDoc
-   Variables      []VarDoc
-   Constants      []VarDoc
-   SubPackages    []string
-}
 
 // IsEmpty reports whether the package documentation is empty (has no content).
 func (pkgDoc *PackageDoc) IsEmpty() bool {
