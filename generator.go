@@ -12,7 +12,7 @@ import (
 )
 
 // Generate creates HTML documentation for all packages within a Go module.
-func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
+func Generate(sourceDir, outputDir, repoUrl, version, importPath string) error {
    if err := os.MkdirAll(outputDir, 0755); err != nil {
       return err
    }
@@ -41,8 +41,8 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
       fullPath := filepath.Join(sourceDir, pkgPath)
       pkgOutputDir := filepath.Join(outputDir, pkgPath)
       // Parse the package without metadata first.
-      pkgDoc := &PackageDoc{}
-      if err := pkgDoc.Parse(fullPath); err != nil {
+      pkgDoc, err := ParsePackageDoc(fullPath)
+      if err != nil {
          log.Printf("Skipping directory %s: %v", fullPath, err)
          continue
       }
@@ -51,7 +51,7 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
          continue
       }
       // Inject metadata.
-      pkgDoc.RepositoryURL = repoURL
+      pkgDoc.RepositoryUrl = repoUrl
       pkgDoc.Version = version
       pkgDoc.StyleSheetPath = styleSheetPath
       pkgDoc.ImportPath = path.Join(importPath, filepath.ToSlash(pkgPath))
@@ -63,15 +63,15 @@ func Generate(sourceDir, outputDir, repoURL, version, importPath string) error {
    }
    var rootDoc *PackageDoc
    if rootPackageExists {
-      rootDoc = &PackageDoc{}
-      if err = rootDoc.Parse(sourceDir); err != nil {
+      rootDoc, err = ParsePackageDoc(sourceDir)
+      if err != nil {
          return err
       }
    } else {
       rootDoc = &PackageDoc{Name: filepath.Base(importPath)}
    }
    // Inject metadata for the root package.
-   rootDoc.RepositoryURL = repoURL
+   rootDoc.RepositoryUrl = repoUrl
    rootDoc.Version = version
    rootDoc.ImportPath = importPath
    rootDoc.StyleSheetPath = styleSheetPath

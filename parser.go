@@ -8,10 +8,35 @@ import (
    "go/parser"
    "go/token"
    "html/template"
+   "log"
    "os"
    "path/filepath"
    "strings"
 )
+
+// PackageDoc holds all the documentation for a single package.
+type PackageDoc struct {
+   Name           string
+   RepositoryUrl  string
+   Version        string
+   ImportPath     string
+   StyleSheetPath string
+   Doc            string
+   Functions      []FuncDoc
+   Types          []TypeDoc
+   Variables      []VarDoc
+   Constants      []VarDoc
+   SubPackages    []string
+}
+
+// IsEmpty reports whether the package documentation is empty (has no content).
+func (p *PackageDoc) IsEmpty() bool {
+   return p.Doc == "" &&
+      len(p.Constants) == 0 &&
+      len(p.Variables) == 0 &&
+      len(p.Functions) == 0 &&
+      len(p.Types) == 0
+}
 
 func parseGoFiles(fset *token.FileSet, dir string) ([]*ast.File, error) {
    entries, err := os.ReadDir(dir)
@@ -39,27 +64,30 @@ func parseGoFiles(fset *token.FileSet, dir string) ([]*ast.File, error) {
    return files, nil
 }
 
-// Parse parses the Go package in the given directory and populates the PackageDoc.
-// It does not populate metadata fields like RepositoryURL or Version.
-func (pkgDoc *PackageDoc) Parse(inputPath string) error {
+// ParsePackageDoc parses the Go package in the given directory and returns an initialized PackageDoc.
+// It does not populate metadata fields like RepositoryUrl or Version.
+func ParsePackageDoc(inputPath string) (*PackageDoc, error) {
    fset := token.NewFileSet()
    files, err := parseGoFiles(fset, inputPath)
    if err != nil {
-      return err
+      return nil, err
    }
    if len(files) == 0 {
-      return fmt.Errorf("no Go source files found in directory: %s", inputPath)
+      return nil, fmt.Errorf("no Go source files found in directory: %s", inputPath)
    }
-   p, err := doc.NewFromFiles(fset, files, "./")
+   docPkg, err := doc.NewFromFiles(fset, files, "./")
    if err != nil {
-      return fmt.Errorf("failed to create doc package: %w", err)
+      return nil, fmt.Errorf("failed to create doc package: %w", err)
    }
    typeNames := make(map[string]struct{})
-   for _, t := range p.Types {
+   for _, t := range docPkg.Types {
       typeNames[t.Name] = struct{}{}
    }
-   pkgDoc.Name = p.Name
-   pkgDoc.Doc = p.Doc
+
+   pkgDoc := &PackageDoc{
+      Name: docPkg.Name,
+      Doc:  docPkg.Doc,
+   }
 
    // -- Helpers to reduce boilerplate --
    process := func(decl ast.Decl) (template.HTML, error) {
@@ -91,39 +119,60 @@ func (pkgDoc *PackageDoc) Parse(inputPath string) error {
    }
 
    // -- Processing --
-   if pkgDoc.Functions, err = processFuncs(p.Funcs); err != nil {
-      return err
+   if pkgDoc.Functions, err = processFuncs(docPkg.Funcs); err != nil {
+      return nil, err
    }
 
-   for _, t := range p.Types {
+   for _, t := range docPkg.Types {
       def, err := process(t.Decl)
       if err != nil {
-         return err
+         return nil, err
       }
       typeDoc := TypeDoc{Name: t.Name, Doc: t.Doc, Definition: def}
 
       // Map constants and variables explicitly grouped under this type
       if typeDoc.Constants, err = processValues(t.Consts); err != nil {
-         return err
+         return nil, err
       }
       if typeDoc.Variables, err = processValues(t.Vars); err != nil {
-         return err
+         return nil, err
       }
 
       if typeDoc.Functions, err = processFuncs(t.Funcs); err != nil {
-         return err
+         return nil, err
       }
       if typeDoc.Methods, err = processFuncs(t.Methods); err != nil {
-         return err
+         return nil, err
       }
       pkgDoc.Types = append(pkgDoc.Types, typeDoc)
    }
 
    // Map untyped / base-level constants and variables
-   if pkgDoc.Constants, err = processValues(p.Consts); err != nil {
+   if pkgDoc.Constants, err = processValues(docPkg.Consts); err != nil {
+      return nil, err
+   }
+   if pkgDoc.Variables, err = processValues(docPkg.Vars); err != nil {
+      return nil, err
+   }
+
+   return pkgDoc, nil
+}
+
+// Render generates the HTML documentation file using the embedded template.
+func (p *PackageDoc) Render(outputPath string) error {
+   // Parse the template directly from the embedded string variable.
+   tmpl, err := template.New("package").Parse(packageTemplateFile)
+   if err != nil {
       return err
    }
-   pkgDoc.Variables, err = processValues(p.Vars)
-
-   return err
+   if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+      return err
+   }
+   log.Printf("Creating file: %s", outputPath)
+   file, err := os.Create(outputPath)
+   if err != nil {
+      return err
+   }
+   defer file.Close()
+   return tmpl.Execute(file, p)
 }
