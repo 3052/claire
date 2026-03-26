@@ -3,8 +3,8 @@
 <head>
     <title>Documentation for {{.Name}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    {{if and .ImportPath .RepositoryURL}}
-    <meta name="go-import" content="{{.ImportPath}} git {{.RepositoryURL}}">
+    {{if and .ImportPath .RepositoryUrl}}
+    <meta name="go-import" content="{{.ImportPath}} git {{.RepositoryUrl}}">
     {{end}}
     <link rel="stylesheet" href="{{.StyleSheetPath}}">
 </head>
@@ -15,8 +15,8 @@
             <span class="version-info">({{.Version}})</span>
         {{end}}
         <span class="meta-link">[<a href="../">up</a>]</span>
-        {{if .RepositoryURL}}
-            <span class="meta-link">[<a href="{{.RepositoryURL}}" target="_blank" rel="noopener">repository</a>]</span>
+        {{if .RepositoryUrl}}
+            <span class="meta-link">[<a href="{{.RepositoryUrl}}" target="_blank" rel="noopener">repository</a>]</span>
         {{end}}
     </h1>
 
