@@ -13,12 +13,13 @@ import (
 
 // Generate creates HTML documentation for all packages within a Go module.
 func Generate(sourceDir, outputDir, repoUrl, version, importPath string) error {
-   if err := os.MkdirAll(outputDir, 0755); err != nil {
+   if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
       return err
    }
    cssDestPath := filepath.Join(outputDir, "style.css")
    log.Printf("Creating file: %s", cssDestPath)
-   if err := os.WriteFile(cssDestPath, []byte(styleFile), 0644); err != nil {
+   err := os.WriteFile(cssDestPath, []byte(styleFile), os.ModePerm)
+   if err != nil {
       return err
    }
    styleSheetPath := calculateStyleSheetPath(importPath)
