@@ -11,7 +11,7 @@ import (
    "strings"
 )
 
-// Generate creates HTML documentation for all packages within a Go module.
+// Generate creates HTML documentation for all packages within a Go module
 func Generate(sourceDir, outputDir, repoUrl, version, importPath string) error {
    if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
       return err
