@@ -14,30 +14,6 @@ import (
    "strings"
 )
 
-// PackageDoc holds all the documentation for a single package.
-type PackageDoc struct {
-   Name           string
-   RepositoryUrl  string
-   Version        string
-   ImportPath     string
-   StyleSheetPath string
-   Doc            string
-   Functions      []FuncDoc
-   Types          []TypeDoc
-   Variables      []VarDoc
-   Constants      []VarDoc
-   SubPackages    []string
-}
-
-// IsEmpty reports whether the package documentation is empty (has no content).
-func (p *PackageDoc) IsEmpty() bool {
-   return p.Doc == "" &&
-      len(p.Constants) == 0 &&
-      len(p.Variables) == 0 &&
-      len(p.Functions) == 0 &&
-      len(p.Types) == 0
-}
-
 func parseGoFiles(fset *token.FileSet, dir string) ([]*ast.File, error) {
    entries, err := os.ReadDir(dir)
    if err != nil {
@@ -63,6 +39,32 @@ func parseGoFiles(fset *token.FileSet, dir string) ([]*ast.File, error) {
    }
    return files, nil
 }
+
+// PackageDoc holds all the documentation for a single package.
+type PackageDoc struct {
+   Name           string
+   RepositoryUrl  string
+   Version        string
+   ImportPath     string
+   StyleSheetPath string
+   Doc            string
+   Functions      []FuncDoc
+   Types          []TypeDoc
+   Variables      []VarDoc
+   Constants      []VarDoc
+   SubPackages    []string
+}
+
+// IsEmpty reports whether the package documentation is empty (has no content).
+func (p *PackageDoc) IsEmpty() bool {
+   return p.Doc == "" &&
+      len(p.Constants) == 0 &&
+      len(p.Variables) == 0 &&
+      len(p.Functions) == 0 &&
+      len(p.Types) == 0
+}
+
+///
 
 // ParsePackageDoc parses the Go package in the given directory and returns an initialized PackageDoc.
 // It does not populate metadata fields like RepositoryUrl or Version.
