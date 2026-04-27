@@ -64,8 +64,6 @@ func (p *PackageDoc) IsEmpty() bool {
       len(p.Types) == 0
 }
 
-///
-
 // ParsePackageDoc parses the Go package in the given directory and returns an initialized PackageDoc.
 // It does not populate metadata fields like RepositoryUrl or Version.
 func ParsePackageDoc(inputPath string) (*PackageDoc, error) {
