@@ -1,9 +1,7 @@
 // renderer.go
 package claire
 
-import (
-   _ "embed"
-)
+import _ "embed"
 
 //go:embed package.tmpl
 var packageTemplateFile string
