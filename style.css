@@ -1,3 +1,7 @@
+.doc {
+    margin-left: 2em;
+}
+
 body {
     font-family: sans-serif;
 }
@@ -18,9 +22,7 @@ pre {
     tab-size: 4;
 }
 
-.doc {
-    margin-left: 2em;
-}
+/*******************************************************************************/
 
 .comment {
     color: firebrick;
