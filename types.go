@@ -12,13 +12,13 @@ type FuncDoc struct {
 
 // TypeDoc holds documentation for a type definition and its methods.
 type TypeDoc struct {
-   Name       string
-   Doc        string
-   Definition template.HTML
    Constants  []VarDoc  // Constants grouped under this type
-   Variables  []VarDoc  // Variables grouped under this type
+   Definition template.HTML
+   Doc        string
    Functions  []FuncDoc // Constructors/factory functions associated with this type.
    Methods    []FuncDoc
+   Name       string
+   Variables  []VarDoc  // Variables grouped under this type
 }
 
 // VarDoc holds documentation for a variable or constant declaration.
