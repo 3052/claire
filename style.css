@@ -6,6 +6,11 @@
     margin-left: 2em;
 }
 
+.keyword {
+    color: blue;
+    font-weight: bold;
+}
+
 body {
     font-family: sans-serif;
 }
@@ -27,11 +32,6 @@ pre {
 }
 
 /*******************************************************************************/
-
-.keyword {
-    color: blue;
-    font-weight: bold;
-}
 
 .string {
     /* No color is applied; defaults to standard text color. */
