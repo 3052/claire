@@ -33,10 +33,6 @@ pre {
 
 /*******************************************************************************/
 
-.string {
-    /* No color is applied; defaults to standard text color. */
-}
-
 .builtin {
     color: forestgreen;
     font-weight: bold;
