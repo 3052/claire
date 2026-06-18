@@ -22,10 +22,12 @@ func parseGoFiles(fset *token.FileSet, dir string) ([]*ast.File, error) {
    var files []*ast.File
    var packageName string
    for _, entry := range entries {
-      if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
+      name := entry.Name()
+      // Ignore directories, non-Go files, and test files
+      if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
          continue
       }
-      path := filepath.Join(dir, entry.Name())
+      path := filepath.Join(dir, name)
       file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
       if err != nil {
          return nil, err
