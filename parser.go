@@ -57,15 +57,6 @@ type PackageDoc struct {
    SubPackages    []string
 }
 
-// IsEmpty reports whether the package documentation is empty (has no content).
-func (p *PackageDoc) IsEmpty() bool {
-   return p.Doc == "" &&
-      len(p.Constants) == 0 &&
-      len(p.Variables) == 0 &&
-      len(p.Functions) == 0 &&
-      len(p.Types) == 0
-}
-
 // ParsePackageDoc parses the Go package in the given directory and returns an initialized PackageDoc.
 // It does not populate metadata fields like RepositoryUrl or Version.
 func ParsePackageDoc(inputPath string) (*PackageDoc, error) {
@@ -158,6 +149,15 @@ func ParsePackageDoc(inputPath string) (*PackageDoc, error) {
    }
 
    return pkgDoc, nil
+}
+
+// IsEmpty reports whether the package documentation is empty (has no content).
+func (p *PackageDoc) IsEmpty() bool {
+   return p.Doc == "" &&
+      len(p.Constants) == 0 &&
+      len(p.Variables) == 0 &&
+      len(p.Functions) == 0 &&
+      len(p.Types) == 0
 }
 
 // Render generates the HTML documentation file using the embedded template.
