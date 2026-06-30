@@ -91,20 +91,29 @@ func calculateStyleSheetPath(importPath string) string {
 
 func findAllPackageDirs(root string) ([]string, error) {
    packageSet := make(map[string]struct{})
+
    err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
       if err != nil {
          return err
       }
-      if !d.IsDir() && strings.HasSuffix(d.Name(), ".go") {
+
+      name := d.Name()
+
+      if !d.IsDir() &&
+         strings.HasSuffix(name, ".go") &&
+         !strings.HasSuffix(name, "_test.go") {
          dir := filepath.Dir(path)
          relDir, _ := filepath.Rel(root, dir)
          packageSet[relDir] = struct{}{}
       }
+
       return nil
    })
+
    packages := make([]string, 0, len(packageSet))
    for pkg := range packageSet {
       packages = append(packages, pkg)
    }
+
    return packages, err
 }
