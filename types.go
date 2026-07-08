@@ -1,7 +1,16 @@
 // types.go
 package claire
 
-import "html/template"
+import (
+   "html/template"
+   _ "embed"
+)
+
+//go:embed package.tmpl
+var packageTemplateFile string
+
+//go:embed style.css
+var styleFile string
 
 // FuncDoc holds documentation for a single function or method.
 type FuncDoc struct {
