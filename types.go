@@ -2,8 +2,8 @@
 package claire
 
 import (
-   "html/template"
    _ "embed"
+   "html/template"
 )
 
 //go:embed package.tmpl
