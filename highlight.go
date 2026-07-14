@@ -75,6 +75,8 @@ func collectFromExpr(expr ast.Expr, fset *token.FileSet, typeNames map[string]st
       for _, index := range x.Indices {
          collectFromExpr(index, fset, typeNames, offsets)
       }
+   case *ast.Ellipsis:
+      collectFromExpr(x.Elt, fset, typeNames, offsets)
    }
 }
 
