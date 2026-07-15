@@ -15,6 +15,7 @@ import (
 )
 
 var builtInTypes = map[string]struct{}{
+   "any":        {},
    "bool":       {},
    "byte":       {},
    "complex64":  {},
